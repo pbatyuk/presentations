@@ -1,0 +1,13 @@
+ 
+\mode<presentation>
+
+\colorlet{bgColor}{White!95!MidnightBlue}
+\colorlet{bg1Color}{White!80!MidnightBlue}
+\colorlet{bg2Color}{White!60!Red}
+\colorlet{textColor}{Black!30!MidnightBlue}
+\colorlet{titleColor}{Black!50!MidnightBlue}
+\colorlet{alertColor}{Black!10!Red}
+\colorlet{exampleColor}{Black!70!Green}
+
+\mode
+<all>
