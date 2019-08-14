@@ -1,0 +1,998 @@
+
+
+void fit3d_test_ratios()
+{
+
+ const int NPT = 1 ;
+
+ Double_t rout [NPT] ;
+ Double_t rside [NPT] ;
+ Double_t rlong [NPT] ;
+ Double_t lambda [NPT] ;
+ Double_t rors [NPT] ;
+ Double_t erout [NPT] ;
+ Double_t erside [NPT] ;
+ Double_t erlong [NPT] ;
+ Double_t elambda [NPT] ;
+ Double_t erors [NPT] ;
+ Double_t norm [NPT] ;
+
+ Double_t rout2 [NPT] ;
+ Double_t rside2 [NPT] ;
+ Double_t rlong2 [NPT] ;
+ Double_t lambda2 [NPT] ;
+ Double_t rors2 [NPT] ;
+ Double_t erout2 [NPT] ;
+ Double_t erside2 [NPT] ;
+ Double_t erlong2 [NPT] ;
+ Double_t elambda2 [NPT] ;
+ Double_t erors2 [NPT] ;
+ Double_t norm2 [NPT] ;
+ 
+ Double_t pt_mean[NPT] = {0.5};
+ Double_t ept[NPT] ={0.0005};
+ TString binnames[NPT] = {"020-080"};
+
+
+ TCanvas *c0 = new TCanvas("c0", "c0", 1200, 600);
+ c0->Divide(3,1);
+ 
+ gStyle->SetOptFit(1);
+ gStyle->SetOptStat(0);
+ 
+ TH3D *hf3[3]; // 1st order
+ hf3[0]=new TH3D("hf30","hf30",60,0.0,0.3,60,0.0,0.3,60,0.0,0.3);
+ hf3[1]=new TH3D("hf31","hf31",60,0.0,0.3,60,0.0,0.3,60,0.0,0.3);
+ hf3[2]=new TH3D("hf32","hf32",60,0.0,0.3,60,0.0,0.3,60,0.0,0.3);
+
+ TH3D *hcf[NPT];
+ TH3D *hnum[NPT];
+ TH3D *hden[NPT];
+ TH3D *hn,*hd;
+
+
+ TH3D *hf32[3]; // cross
+ hf32[0]=new TH3D("hf302","hf302",60,0.0,0.3,60,0.0,0.3,60,0.0,0.3);
+ hf32[1]=new TH3D("hf312","hf312",60,0.0,0.3,60,0.0,0.3,60,0.0,0.3);
+ hf32[2]=new TH3D("hf322","hf322",60,0.0,0.3,60,0.0,0.3,60,0.0,0.3);
+
+ TH3D *hcf2[NPT];
+ TH3D *hnum2[NPT];
+ TH3D *hden2[NPT];
+ TH3D *hn2,*hd2;
+
+
+
+
+
+ int wbin=3; // projection 3D->1D
+
+ float fitbinmin=0.0;//-0.5;   //-0.15;  //-0.25; 
+ float fitbinmax=0.3;
+ int ri=0;  
+
+ float ydrawmax=2.0;  //1.4;  //1,3
+ float ydrawmin=0.0;  //0.6; //0.95
+ 
+//Normalization region
+ Int_t xmi=40;
+ Int_t ymi=40;
+ Int_t zmi=40;
+ Int_t xma=60;
+ Int_t yma=60;
+ Int_t zma=60;
+
+
+ TF3 *fit = new TF3("cf3", fithist3, -0.3,0.3,-0.3,0.3,-0.3,0.3,8);      
+ //TF3 *fit= new TF3("cf3", "[4]*(1.0+[0]*exp(-[1]*x*x/3.89379e-02-[2]*y*y/3.89379e-02-[3]*z*z/3.89379e-02))", -0.3,0.3,-0.3,0.3,-0.3,0.3);
+  fit->SetParLimits(0, 0.2, 1.0);  //Lambda
+ // fit->SetParLimits(0, 0.01, 1.0);  //Lambda
+  fit->SetParLimits(1, 0.01, 500.0); //R_out
+  fit->SetParLimits(2, 0.01, 500.0); //R_side
+  fit->SetParLimits(3, 0.01, 500.0); //R_long
+  fit->SetParLimits(4, 0.09, 2.1); //norm
+  fit->SetParName(0, "Lambda        ");
+  fit->SetParName(1, "R_out  sq");
+  fit->SetParName(2, "R_side sq");
+  fit->SetParName(3, "R_long sq");
+  fit->SetParName(4, "Normaliz ");
+  fit->SetParName(5, "mult");
+  fit->SetParName(6, "kT ");    
+  fit->SetParName(7, " rinvindex ");     
+
+  std::cout<<" fit4cf 3 "<<std::endl;
+
+
+
+ TF1 *fitc1 = new TF1("fitc1","[2]*(1+[1]*exp(-25.76578*x*x*[0]*[0]))",0.0,0.2);
+  fitc1->SetParLimits(0, 0.01, 10.0); //R_out
+  fitc1->SetParLimits(1, 0.02, 1.1); //lambda
+  fitc1->SetParLimits(2, 0.9, 1.1); //norm
+  fitc1->SetParName(1, "Lambda");
+  fitc1->SetParName(0, "R_osl");
+  //fitc1->SetParName(2, "R_side");
+  //fitc1->SetParName(3, "R_long");
+  fitc1->SetParName(2, "Normaliz ");
+
+
+ Double_t pt_mean_STAR[4],RosSTAR[4];
+
+for(int ipt=0; ipt<NPT; ipt++)   //  pt loop
+ {
+    pt_mean[ipt]=TMath::Sqrt(pt_mean[ipt]*pt_mean[ipt]+0.13957*0.13957);
+ }
+
+
+
+ TFile *f1 = new TFile("CFs_1PT.root");
+//TFile *f1 = new TFile("CFs_pions_1PT_11_5.root");
+ 
+
+TF3 *fitc = new TF3("fitc","[4]*(1+[3]*exp(-25.76578*(x*x*[0]*[0]+y*y*[1]*[1]+z*z*[2]*[2])))",0.0,0.2);
+ fitc->SetParameters(3.0, 3.0, 3.0, 1.0,1.0);
+ fitc->SetParName(3, "Lambda");
+ fitc->SetParName(0, "R_out");
+ fitc->SetParName(1, "R_side");
+ fitc->SetParName(2, "R_long");
+ fitc->SetParName(4, "Normaliz ");
+ fitc->SetLineColor(4);
+
+ for(int ipt=0; ipt<NPT; ipt++)   //  pt loop
+    {
+     hf3[ipt]->Sumw2();
+      //TH3F *hCF = (TH3F*)f1->Get("hCF"+binnames[ipt]);
+     hn = (TH3D*)f1->Get("hCFnom"+binnames[ipt]);
+     hd = (TH3D*)f1->Get("hCFden"+binnames[ipt]);
+
+
+     hnum[ipt]=new TH3D(*hn);
+     hden[ipt]=new TH3D(*hd);
+
+     hcf[ipt] = new TH3D(*hn);
+     hcf[ipt]->Divide(hd); 
+
+
+
+     hcf[ipt]->GetXaxis()->SetRange(0,30);
+     hcf[ipt]->GetYaxis()->SetRange(0,30);
+     hcf[ipt]->GetZaxis()->SetRange(0,30);
+
+
+     // hCF->Fit(fitc,"Q0");
+     hcf[ipt]->Fit(fitc," ");
+
+  
+    fitc = (TF3*)(hcf[ipt]->GetFunction("fitc"));
+    rout[ipt] = fitc->GetParameter(0);
+    rside[ipt] = TMath::Abs(fitc->GetParameter(1));
+    rlong[ipt] = TMath::Abs(fitc->GetParameter(2));
+    lambda[ipt] = fitc->GetParameter(3);
+    rors[ipt] = TMath::Abs(rout[ipt]/rside[ipt]);
+    erout[ipt] = fitc->GetParError(0);
+    erside[ipt] = fitc->GetParError(1);
+    erlong[ipt] = fitc->GetParError(2);
+    elambda[ipt] = fitc->GetParError(3);
+    erors[ipt] = erout[ipt]/rside[ipt]-erside[ipt]*rout[ipt]/(rside[ipt]*rside[ipt]);
+    norm[ipt] = fitc->GetParameter(4);
+
+    printf("pt = %f  Ro = %f +/- %f  Rs = %f +/- %f Rl = %f +/- %f  lambda =  %f +/- %f\n", pt_mean[ipt],
+        rout[ipt],erout[ipt], rside[ipt],erside[ipt], rlong[ipt],erlong[ipt], lambda[ipt],elambda[ipt]);    
+
+
+    std::cout<< " Chi2 is " << fitc->GetChisquare() <<" NdF is "<< fitc->GetNDF()<<"  chi2/NdF  "<<fitc->GetChisquare()/fitc->GetNDF()<<std::endl;
+
+ }
+
+   for(int ipt=0; ipt<NPT; ipt++)   //  pt loop
+    {
+          for(Int_t ix=0; ix<60 ; ix++) 
+	       for(Int_t iy=0; iy<60 ; iy++) 
+	         for(Int_t iz=0; iz<60 ; iz++){
+
+                   Double_t qx=hcf[ipt]->GetXaxis()->GetBinCenter(ix);
+	           Double_t qy=hcf[ipt]->GetYaxis()->GetBinCenter(iy);
+	           Double_t qz=hcf[ipt]->GetZaxis()->GetBinCenter(iz);
+
+		   //TF3 *fitc = new TF3("fitc","[4]*(1+[3]*exp(-25.76578*(x*x*[0]*[0]+y*y*[1]*[1]+z*z*[2]*[2])))");
+    
+		   Double_t C = norm[ipt]*(1+lambda[ipt]*exp(-rout[ipt]*rout[ipt]*qx*qx/0.197327/0.197327-rside[ipt]*rside[ipt]*qy*qy/0.197327/0.197327-rlong[ipt]*rlong[ipt]*qz*qz/0.197327/0.197327));
+   
+                   Double_t co = C * (hden[ipt]->GetBinContent(ix,iy,iz));
+	           hf3[ipt]->SetBinContent(ix,iy,iz,co);
+
+		 }
+
+		}
+
+   //////////////////  Cross
+
+     TFile *f2 = new TFile("CFs.root") ;  //crossover
+   // TFile *f2 = new TFile("CFs_pions_crossover_11_5.root"); 
+
+ for(int ipt=0; ipt<NPT; ipt++)   //  pt loop
+    {
+     hf32[ipt]->Sumw2();
+   
+     hn2 = (TH3D*)f2->Get("hCFnom"+binnames[ipt]);
+     hd2 = (TH3D*)f2->Get("hCFden"+binnames[ipt]);
+
+
+     hnum2[ipt]=new TH3D(*hn2);
+     hden2[ipt]=new TH3D(*hd2);
+
+     hcf2[ipt] = new TH3D(*hn2);
+     hcf2[ipt]->Divide(hd2); 
+
+
+
+     hcf2[ipt]->GetXaxis()->SetRange(0,30);
+     hcf2[ipt]->GetYaxis()->SetRange(0,30);
+     hcf2[ipt]->GetZaxis()->SetRange(0,30);
+
+
+     // hCF->Fit(fitc,"Q0");
+     hcf2[ipt]->Fit(fitc," ");
+
+  
+    fitc2 = (TF3*)(hcf2[ipt]->GetFunction("fitc"));
+    rout2[ipt] = fitc->GetParameter(0);
+    rside2[ipt] = TMath::Abs(fitc->GetParameter(1));
+    rlong2[ipt] = TMath::Abs(fitc->GetParameter(2));
+    lambda2[ipt] = fitc->GetParameter(3);
+    rors2[ipt] = TMath::Abs(rout[ipt]/rside[ipt]);
+    erout2[ipt] = fitc->GetParError(0);
+    erside2[ipt] = fitc->GetParError(1);
+    erlong2[ipt] = fitc->GetParError(2);
+    elambda2[ipt] = fitc->GetParError(3);
+    erors2[ipt] = erout[ipt]/rside[ipt]-erside[ipt]*rout[ipt]/(rside[ipt]*rside[ipt]);
+    norm2[ipt] = fitc->GetParameter(4);
+
+    printf("Cross o: pt = %f  Ro = %f +/- %f  Rs = %f +/- %f Rl = %f +/- %f  lambda =  %f +/- %f\n", pt_mean[ipt],
+        rout2[ipt],erout2[ipt], rside2[ipt],erside2[ipt], rlong2[ipt],erlong2[ipt], lambda2[ipt],elambda2[ipt]);    
+
+
+    std::cout<< " Chi2 is " << fitc->GetChisquare() <<" NdF is "<< fitc2->GetNDF()<<"  chi2/NdF  "<<fitc2->GetChisquare()/fitc2->GetNDF()<<std::endl;
+
+ }
+
+   for(int ipt=0; ipt<NPT; ipt++)   //  pt loop
+    {
+          for(Int_t ix=0; ix<60 ; ix++) 
+	       for(Int_t iy=0; iy<60 ; iy++) 
+	         for(Int_t iz=0; iz<60 ; iz++){
+
+                   Double_t qx=hcf2[ipt]->GetXaxis()->GetBinCenter(ix);
+	           Double_t qy=hcf2[ipt]->GetYaxis()->GetBinCenter(iy);
+	           Double_t qz=hcf2[ipt]->GetZaxis()->GetBinCenter(iz);
+
+		   //TF3 *fitc = new TF3("fitc","[4]*(1+[3]*exp(-25.76578*(x*x*[0]*[0]+y*y*[1]*[1]+z*z*[2]*[2])))");
+    
+		   Double_t C = norm2[ipt]*(1+lambda[ipt]*exp(-rout[ipt]*rout[ipt]*qx*qx/0.197327/0.197327-rside[ipt]*rside[ipt]*qy*qy/0.197327/0.197327-rlong[ipt]*rlong[ipt]*qz*qz/0.197327/0.197327));
+   
+                   Double_t co = C * (hden2[ipt]->GetBinContent(ix,iy,iz));
+	           hf32[ipt]->SetBinContent(ix,iy,iz,co);
+
+		 }
+
+		}
+
+
+
+  gStyle->SetOptFit(1);
+  gStyle->SetOptStat(0);
+   for(int k=0; k<NPT; k++)   //  pt loop
+         {
+
+	  //	if(m==1){
+	  // int kk=k+1;
+	  // int iii=1+3*(kk-1);
+	
+	  //	cout[0]->cd(iii);
+     
+        c0->cd(1);
+
+        hnum[k]->GetXaxis()->SetRange(1,60);	
+        hnum[k]->GetYaxis()->SetRange(1,1+wbin);
+        hnum[k]->GetZaxis()->SetRange(1,1+wbin);
+
+        hden[k]->GetXaxis()->SetRange(1,60);	
+        hden[k]->GetYaxis()->SetRange(1,1+wbin);
+        hden[k]->GetZaxis()->SetRange(1,1+wbin);
+
+        hcf[k]->GetXaxis()->SetRange(1,60);	
+        hcf[k]->GetYaxis()->SetRange(1,1+wbin);
+        hcf[k]->GetZaxis()->SetRange(1,1+wbin);
+
+     
+        TH1D *qn = (TH1D *) hcf[k]->Project3D("xe");
+        TH1D *qd = (TH1D *) hden[k]->Project3D("xe");
+
+        qn->Sumw2();qd->Sumw2(); 	
+        TH1D *ratiox= new TH1D(*qn);
+        ratiox->Sumw2();
+
+	Double_t scale_ratio = hhscale(ratiox,xmi,xma);
+	ratiox->Scale(scale_ratio);
+
+
+        hf3[k]->GetXaxis()->SetRange(1,60);	
+        hf3[k]->GetYaxis()->SetRange(1,1+wbin);
+        hf3[k]->GetZaxis()->SetRange(1,1+wbin);     
+        TH1D *qf3 = (TH1D *) hf3[k]->Project3D("xe");
+        TH1D *ratf3= new TH1D(*qf3);
+        ratf3->Sumw2(); qf3->Sumw2();
+	ratf3->Divide(qd);
+	Double_t scale_ratio_f3 = hhscale(ratf3,xmi,xma);	 
+	ratf3->Scale(scale_ratio_f3);
+      	
+    ////test	ratiox->Draw("E0");
+	//	ratf3->Draw("histo:same");
+	ratf3->SetLineWidth(2);
+	ratf3->SetLineColor(2);	
+       	ratiox->SetMarkerStyle(20);
+        ratiox->SetMarkerColor(kGreen+1);    
+        ratiox->SetLineColor(kGreen+1);
+
+  
+	//	ratiox->Fit("fitc1");
+
+        //ratiox->GetYaxis()->SetTitle("C_{out} ");
+        ratiox->SetTitle("C(q_{out})");
+	ratiox->SetTitleSize(5);
+	ratiox->GetXaxis()->SetTitle("q_{out}, GeV/c");
+        ratiox->GetYaxis()->SetLabelSize(0.075);
+        ratiox->GetXaxis()->SetLabelSize(0.075);
+        ratiox->GetYaxis()->SetTitleSize(0.075);
+        ratiox->GetXaxis()->SetTitleSize(0.075);
+	ratiox->GetXaxis()->SetTitleOffset(0.55);
+	ratiox->GetYaxis()->SetTitleOffset(-0.55);
+	ratiox->GetXaxis()->SetLabelOffset(-0.02);
+        ratiox->GetXaxis()->SetRangeUser(0.5, 1.5);
+	// ratiox->GetYaxis()->SetTickLength(0.05);
+        ratiox->GetXaxis()->CenterTitle(true);
+	// ratiox->GetYaxis()->CenterTitle(true);
+	///////////////////////////////////////////////////////////////////////
+
+
+        hnum2[k]->GetXaxis()->SetRange(1,60);	
+        hnum2[k]->GetYaxis()->SetRange(1,1+wbin);
+        hnum2[k]->GetZaxis()->SetRange(1,1+wbin);
+
+        hden2[k]->GetXaxis()->SetRange(1,60);	
+        hden2[k]->GetYaxis()->SetRange(1,1+wbin);
+        hden2[k]->GetZaxis()->SetRange(1,1+wbin);
+
+
+        hcf2[k]->GetXaxis()->SetRange(1,60);	
+        hcf2[k]->GetYaxis()->SetRange(1,1+wbin);
+        hcf2[k]->GetZaxis()->SetRange(1,1+wbin);
+
+     
+        TH1D *qn2 = (TH1D *) hcf2[k]->Project3D("xe");
+        TH1D *qd2 = (TH1D *) hden2[k]->Project3D("xe");
+
+        qn2->Sumw2();qd2->Sumw2(); 	
+        TH1D *ratiox2= new TH1D(*qn2);
+        ratiox2->Sumw2();
+	Double_t scale_ratio2 = hhscale(ratiox2,xmi,xma);
+	ratiox2->Scale(scale_ratio2);
+
+        hf32[k]->GetXaxis()->SetRange(1,60);	
+        hf32[k]->GetYaxis()->SetRange(1,1+wbin);
+        hf32[k]->GetZaxis()->SetRange(1,1+wbin);     
+        TH1D *qf32 = (TH1D *) hf32[k]->Project3D("xe");
+        TH1D *ratf32= new TH1D(*qf32);
+        ratf32->Sumw2(); qf32->Sumw2();
+	ratf32->Divide(qd2);
+	Double_t scale_ratio_f32 = hhscale(ratf32,xmi,xma);	 
+	ratf32->Scale(scale_ratio_f32);
+
+        ratiox2->Divide(ratiox);
+	ratiox2->Draw("E0");
+
+      	
+	/////test	ratiox2->Draw("E0:same");
+	//	ratf32->Draw("histo:same");
+	ratf32->SetLineWidth(2);
+	ratf32->SetLineColor(2);	
+       	ratiox2->SetMarkerStyle(20);
+        ratiox2->SetMarkerColor(2);    
+        ratiox2->SetLineColor(2);
+        
+        ratiox2->SetTitle("C(q_{out})");
+	ratiox2->SetTitleSize(5);
+	ratiox2->GetXaxis()->SetTitle("q_{out}, GeV/c");
+        ratiox2->GetYaxis()->SetLabelSize(0.075);
+        ratiox2->GetXaxis()->SetLabelSize(0.075);
+        ratiox2->GetYaxis()->SetTitleSize(0.075);
+        ratiox2->GetXaxis()->SetTitleSize(0.075);
+	ratiox2->GetXaxis()->SetTitleOffset(0.55);
+	ratiox2->GetYaxis()->SetTitleOffset(-0.55);
+	ratiox2->GetXaxis()->SetLabelOffset(-0.02);
+        ratiox2->GetYaxis()->SetRangeUser(0.5, 1.5);
+	// ratiox->GetYaxis()->SetTickLength(0.05);
+        ratiox2->GetXaxis()->CenterTitle(true);
+
+	//ratiox->Fit("fitc1");
+
+  
+	///////////////////////////////////////////////////////////////
+        c0->cd(2);
+
+        hnum[k]->GetYaxis()->SetRange(1,60);	
+        hnum[k]->GetXaxis()->SetRange(1,1+wbin);
+        hnum[k]->GetZaxis()->SetRange(1,1+wbin);
+
+        hden[k]->GetYaxis()->SetRange(1,60);	
+        hden[k]->GetXaxis()->SetRange(1,1+wbin);
+        hden[k]->GetZaxis()->SetRange(1,1+wbin);
+
+
+        hcf[k]->GetYaxis()->SetRange(1,60);	
+        hcf[k]->GetXaxis()->SetRange(1,1+wbin);
+        hcf[k]->GetZaxis()->SetRange(1,1+wbin);
+
+     
+        TH1D *qny = (TH1D *) hcf[k]->Project3D("ye");
+        TH1D *qdy = (TH1D *) hden[k]->Project3D("ye");
+
+        qny->Sumw2();qdy->Sumw2(); 	
+        TH1D *ratioy= new TH1D(*qny);
+        ratioy->Sumw2();
+	///////   ratiox->Divide(qd);
+	scale_ratio = hhscale(ratioy,xmi,xma);
+	ratioy->Scale(scale_ratio);
+
+        hf3[k]->GetYaxis()->SetRange(1,60);	
+        hf3[k]->GetXaxis()->SetRange(1,1+wbin);
+        hf3[k]->GetZaxis()->SetRange(1,1+wbin);     
+        TH1D *qf3y = (TH1D *) hf3[k]->Project3D("ye");
+        TH1D *ratf3y= new TH1D(*qf3y);
+        ratf3y->Sumw2(); qf3y->Sumw2();
+	ratf3y->Divide(qdy);
+	scale_ratio_f3 = hhscale(ratf3y,xmi,xma);	 
+	ratf3y->Scale(scale_ratio_f3);
+      	
+	/////test	ratioy->Draw("E0");
+
+	ratf3y->SetLineWidth(2);
+	ratf3y->SetLineColor(2);	
+       	ratioy->SetMarkerStyle(20);
+        ratioy->SetMarkerColor(kGreen+1);    
+        ratioy->SetLineColor(kGreen+1);
+
+	//	ratioy->Fit("fitc1");
+	//	ratf3y->Draw("histo:same");
+
+        ratioy->GetXaxis()->SetTitle("q_{side} (GeV/c) ");
+        ratioy->GetYaxis()->SetLabelSize(0.05);
+        ratioy->GetXaxis()->SetLabelSize(0.05);
+        ratioy->GetYaxis()->SetTitleSize(0.06);
+        ratioy->GetXaxis()->SetTitleSize(0.07);
+        ratioy->GetXaxis()->SetTitleOffset(0.9);
+        ratioy->GetYaxis()->SetTickLength(0.05);
+        ratioy->GetXaxis()->CenterTitle(true);
+        ratioy->GetYaxis()->CenterTitle(true);
+
+	///////////////////////////////////////////////////////////////////////
+
+
+        hnum2[k]->GetYaxis()->SetRange(1,60);	
+        hnum2[k]->GetXaxis()->SetRange(1,1+wbin);
+        hnum2[k]->GetZaxis()->SetRange(1,1+wbin);
+
+        hden2[k]->GetYaxis()->SetRange(1,60);	
+        hden2[k]->GetXaxis()->SetRange(1,1+wbin);
+        hden2[k]->GetZaxis()->SetRange(1,1+wbin);
+
+
+        hcf2[k]->GetYaxis()->SetRange(1,60);	
+        hcf2[k]->GetXaxis()->SetRange(1,1+wbin);
+        hcf2[k]->GetZaxis()->SetRange(1,1+wbin);
+
+     
+        TH1D *qn2 = (TH1D *) hcf2[k]->Project3D("ye");
+        TH1D *qd2 = (TH1D *) hden2[k]->Project3D("ye");
+
+        qn2->Sumw2();qd2->Sumw2(); 	
+        TH1D *ratioy2= new TH1D(*qn2);
+        ratioy2->Sumw2();
+	Double_t scale_ratio2 = hhscale(ratioy2,xmi,xma);
+	ratioy2->Scale(scale_ratio2);
+
+        hf32[k]->GetYaxis()->SetRange(1,60);	
+        hf32[k]->GetXaxis()->SetRange(1,1+wbin);
+        hf32[k]->GetZaxis()->SetRange(1,1+wbin);     
+        TH1D *qf32 = (TH1D *) hf32[k]->Project3D("ye");
+        TH1D *ratf32= new TH1D(*qf32);
+        ratf32->Sumw2(); qf32->Sumw2();
+	ratf32->Divide(qd2);
+	Double_t scale_ratio_f32 = hhscale(ratf32,xmi,xma);	 
+	ratf32->Scale(scale_ratio_f32);
+      	
+	///	ratioy2->Draw("E0:same");
+        ratioy2->Divide(ratioy);
+	ratioy2->Draw("E0");
+	//	ratf32->Draw("histo:same");
+	ratf32->SetLineWidth(2);
+	ratf32->SetLineColor(2);	
+       	ratioy2->SetMarkerStyle(20);
+        ratioy2->SetMarkerColor(2);    
+        ratioy2->SetLineColor(2);
+        
+        ratioy2->SetTitle("C(q_{out})");
+	ratioy2->SetTitleSize(5);
+	ratioy2->GetXaxis()->SetTitle("q_{side}, GeV/c");
+        ratioy2->GetYaxis()->SetLabelSize(0.075);
+        ratioy2->GetXaxis()->SetLabelSize(0.075);
+        ratioy2->GetYaxis()->SetTitleSize(0.075);
+        ratioy2->GetXaxis()->SetTitleSize(0.075);
+	ratioy2->GetXaxis()->SetTitleOffset(0.55);
+	ratioy2->GetYaxis()->SetTitleOffset(-0.55);
+	ratioy2->GetXaxis()->SetLabelOffset(-0.02);
+        ratioy2->GetYaxis()->SetRangeUser(0.5, 1.5);
+	// ratiox->GetYaxis()->SetTickLength(0.05);
+        ratioy2->GetXaxis()->CenterTitle(true);
+
+	//ratiox->Fit("fitc1");
+
+
+	////////////////////////////////////////////
+
+        c0->cd(3);
+     
+        hnum[k]->GetZaxis()->SetRange(1,60);	
+        hnum[k]->GetXaxis()->SetRange(1,1+wbin);
+        hnum[k]->GetYaxis()->SetRange(1,1+wbin);
+
+        hden[k]->GetZaxis()->SetRange(1,60);	
+        hden[k]->GetXaxis()->SetRange(1,1+wbin);
+        hden[k]->GetYaxis()->SetRange(1,1+wbin);
+
+
+        hcf[k]->GetZaxis()->SetRange(1,60);	
+        hcf[k]->GetXaxis()->SetRange(1,1+wbin);
+        hcf[k]->GetYaxis()->SetRange(1,1+wbin);
+
+     
+        TH1D *qnz = (TH1D *) hcf[k]->Project3D("ze");
+        TH1D *qdz = (TH1D *) hden[k]->Project3D("ze");
+
+        qnz->Sumw2();qdz->Sumw2(); 	
+        TH1D *ratioz= new TH1D(*qnz);
+        ratioz->Sumw2();
+	///////   ratiox->Divide(qd);
+	scale_ratio = hhscale(ratioz,xmi,xma);
+        ratioz->Scale(scale_ratio);
+
+
+        hf3[k]->GetZaxis()->SetRange(1,60);	
+        hf3[k]->GetXaxis()->SetRange(1,1+wbin);
+        hf3[k]->GetYaxis()->SetRange(1,1+wbin);     
+        TH1D *qf3z = (TH1D *) hf3[k]->Project3D("ze");
+        TH1D *ratf3z= new TH1D(*qf3z);
+        ratf3z->Sumw2(); qf3y->Sumw2();
+	ratf3z->Divide(qdz);
+	scale_ratio_f3 = hhscale(ratf3z,xmi,xma);	 
+	ratf3z->Scale(scale_ratio_f3);
+      	
+	////test	ratioz->Draw("E0");
+
+	ratf3z->SetLineWidth(2);
+	ratf3z->SetLineColor(2);	
+       	ratioz->SetMarkerStyle(20);
+        ratioz->SetMarkerColor(kGreen+1);    
+        ratioz->SetLineColor(kGreen+1);
+
+	//	ratioz->Fit("fitc1");
+	//	ratf3z->Draw("histo:same");
+
+        ratioz->GetXaxis()->SetTitle("q_{long} (GeV/c) ");
+        ratioz->GetYaxis()->SetLabelSize(0.05);
+        ratioz->GetXaxis()->SetLabelSize(0.05);
+        ratioz->GetYaxis()->SetTitleSize(0.06);
+        ratioz->GetXaxis()->SetTitleSize(0.07);
+        ratioz->GetXaxis()->SetTitleOffset(0.9);
+        ratioz->GetYaxis()->SetTickLength(0.05);
+        ratioz->GetXaxis()->CenterTitle(true);
+        ratioz->GetYaxis()->CenterTitle(true);
+
+	///////////////////////////////////////////////////////////
+
+
+        hnum2[k]->GetZaxis()->SetRange(1,60);	
+        hnum2[k]->GetXaxis()->SetRange(1,1+wbin);
+        hnum2[k]->GetYaxis()->SetRange(1,1+wbin);
+
+        hden2[k]->GetZaxis()->SetRange(1,60);	
+        hden2[k]->GetXaxis()->SetRange(1,1+wbin);
+        hden2[k]->GetYaxis()->SetRange(1,1+wbin);
+
+
+        hcf2[k]->GetZaxis()->SetRange(1,60);	
+        hcf2[k]->GetXaxis()->SetRange(1,1+wbin);
+        hcf2[k]->GetYaxis()->SetRange(1,1+wbin);
+
+     
+        TH1D *qn2 = (TH1D *) hcf2[k]->Project3D("ze");
+        TH1D *qd2 = (TH1D *) hden2[k]->Project3D("ze");
+
+        qn2->Sumw2();qd2->Sumw2(); 	
+        TH1D *ratioz2= new TH1D(*qn2);
+        ratioz2->Sumw2();
+	Double_t scale_ratio2 = hhscale(ratioz2,xmi,xma);
+	ratioz2->Scale(scale_ratio2);
+
+        hf32[k]->GetZaxis()->SetRange(1,60);	
+        hf32[k]->GetXaxis()->SetRange(1,1+wbin);
+        hf32[k]->GetYaxis()->SetRange(1,1+wbin);     
+        TH1D *qf32 = (TH1D *) hf32[k]->Project3D("ze");
+        TH1D *ratf32= new TH1D(*qf32);
+        ratf32->Sumw2(); qf32->Sumw2();
+	ratf32->Divide(qd2);
+	Double_t scale_ratio_f32 = hhscale(ratf32,xmi,xma);	 
+	ratf32->Scale(scale_ratio_f32);
+      	
+	////test	ratioz2->Draw("E0:same");
+
+        ratioz2->Divide(ratioz);
+	ratioz2->Draw("E0");
+        
+        ratioz2->SetTitle("C(q_{out})");
+	ratioz2->SetTitleSize(5);
+	ratioz2->GetXaxis()->SetTitle("q_{long}, GeV/c");
+        ratioz2->GetYaxis()->SetLabelSize(0.075);
+        ratioz2->GetXaxis()->SetLabelSize(0.075);
+        ratioz2->GetYaxis()->SetTitleSize(0.075);
+        ratioz2->GetXaxis()->SetTitleSize(0.075);
+	ratioz2->GetXaxis()->SetTitleOffset(0.55);
+	ratioz2->GetYaxis()->SetTitleOffset(-0.55);
+	ratioz2->GetXaxis()->SetLabelOffset(-0.02);
+        ratioz2->GetYaxis()->SetRangeUser(0.5, 1.5);
+	// ratiox->GetYaxis()->SetTickLength(0.05);
+        ratioz2->GetXaxis()->CenterTitle(true);
+	// ratiox->GetYaxis()->CenterTitle(true);
+
+	//	ratf32->Draw("histo:same");
+	ratf32->SetLineWidth(2);
+	ratf32->SetLineColor(2);	
+       	ratioz2->SetMarkerStyle(20);
+        ratioz2->SetMarkerColor(2);    
+        ratioz2->SetLineColor(2);
+
+
+
+    }
+
+
+
+
+// end pt loop
+
+ /*
+
+for(int ipt=0; ipt<NPT1; ipt++)   //  pt loop
+ {
+   // TH3F *hCF = (TH3F*)f2->Get("hCF"+binnames[ipt]);
+
+ TH3F *hCFnom = (TH3F*)f2->Get("hCFnom"+binnames[ipt]);
+ TH3F *hCFden = (TH3F*)f2->Get("hCFden"+binnames[ipt]);
+
+TH3F *hCF = new TH3F(*hCFnom);
+ hCF->Divide(hCFden); 
+
+ hCF->Fit(fitc,"Q0");
+ fitc = (TF3*)(hCF->GetFunction("fitc"));
+ rout2[ipt] = TMath::Abs(fitc->GetParameter(0));
+ rside2[ipt] = TMath::Abs(fitc->GetParameter(1));
+ rlong2[ipt] = TMath::Abs(fitc->GetParameter(2));
+ lambda2[ipt] = fitc->GetParameter(3);
+ rors2[ipt] = TMath::Abs(rout2[ipt]/rside2[ipt]);
+ erout2[ipt] = fitc->GetParError(0);
+ erside2[ipt] = fitc->GetParError(1);
+ erlong2[ipt] = fitc->GetParError(2);
+ elambda2[ipt] = fitc->GetParError(3);
+ erors2[ipt] = erout2[ipt]/rside2[ipt]-erside2[ipt]*rout2[ipt]/(rside2[ipt]*rside2[ipt]);
+
+ printf("pt = %f  Ro = %f +/- %f  Rs = %f +/- %f Rl = %f +/- %f  lambda =  %f +/- %f\n", pt_mean[ipt],
+        rout2[ipt],erout2[ipt], rside2[ipt],erside2[ipt], rlong2[ipt],erlong2[ipt], lambda2[ipt],elambda2[ipt]);
+ } // end pt loop
+
+
+
+/////  Draw
+
+ TCanvas *c0 = new TCanvas("c1", "c1", 1200, 1200);
+
+
+
+
+
+
+ //TCanvas *c1 = new TCanvas("c1", "c1", 800, 600);
+ TCanvas *c1 = new TCanvas("c1", "c1", 1200, 1200);
+                                                                                                  
+  gPad->SetFillStyle(4000);
+  gPad->SetFillColor(0);
+  //c1->Divide(2,2,0.001,0.001);
+  c1->Divide(2,2,0.001,0.001);
+ 
+ c1->cd(1);
+
+ gPad->SetTopMargin(0.02);
+ gPad->SetRightMargin(0.1);
+ gPad->SetLeftMargin(0.2);
+ gPad->SetBottomMargin(0.2);
+
+ TMultiGraph *mg =new TMultiGraph();
+
+ TGraph *out = new TGraphErrors(NPT1, pt_mean, rout,ept, erout) ;
+ out->SetMarkerStyle(22);
+ out->SetLineColor(kGreen+1);
+ out->SetMarkerColor(kGreen+1);
+ out->SetMarkerSize(1.4);
+
+
+TGraph *out2 = new TGraphErrors(NPT1, pt_mean, rout2,ept, erout2) ;
+ out2->SetMarkerStyle(20);
+ out2->SetLineColor(2);
+ out2->SetMarkerColor(2);
+ out2->SetMarkerSize(1.4);
+
+TGraph *outSTAR = new TGraphErrors(4, pt_mean_STAR, RoSTAR,ept, eRoSTAR) ;
+ outSTAR->SetMarkerStyle(32);
+ outSTAR->SetLineColor(1);
+ outSTAR->SetMarkerColor(1);
+ outSTAR->SetMarkerSize(1.4);
+
+mg->Add(outSTAR);
+
+ mg->Add(out2);
+
+ mg->Add(out);
+ mg->SetMaximum(7);
+ mg->SetMinimum(2);
+ mg->Draw("AP");
+ mg->GetXaxis()->SetTitle("m_{T} (GeV/c)");
+ mg->GetXaxis()->SetLabelSize(0.05);
+ mg->GetXaxis()->SetTitleSize(0.08);
+ mg->GetXaxis()->SetTitleOffset(0.8);
+ mg->GetYaxis()->SetTitle("R_{out} (fm) ");
+ mg->GetYaxis()->SetLabelSize(0.05);
+ mg->GetYaxis()->SetTitleSize(0.08);
+ mg->GetYaxis()->SetTitleOffset(0.9);
+
+ c1->cd(2);
+ gPad->SetTopMargin(0.02);
+ gPad->SetRightMargin(0.1);
+ gPad->SetLeftMargin(0.2);
+ gPad->SetBottomMargin(0.2);
+
+
+ TMultiGraph *mg =new TMultiGraph();
+ TGraph *side = new TGraphErrors(NPT1, pt_mean, rside, ept, erside) ;
+ side->SetMarkerStyle(22);
+ side->SetLineColor(kGreen+1);
+ side->SetMarkerColor(kGreen+1);
+ side->SetMarkerSize(1.4);
+
+TGraph *side2 = new TGraphErrors(NPT1, pt_mean, rside2,ept, erside2) ;
+ side2->SetMarkerStyle(20);
+ side2->SetLineColor(2);
+ side2->SetMarkerColor(2);
+ side2->SetMarkerSize(1.4);
+
+
+TGraph *sideSTAR = new TGraphErrors(4, pt_mean_STAR, RsSTAR,ept, eRoSTAR) ;
+ sideSTAR->SetMarkerStyle(32);
+ sideSTAR->SetLineColor(1);
+ sideSTAR->SetMarkerColor(1);
+ sideSTAR->SetMarkerSize(1.4);
+
+ mg->Add(side);
+ mg->Add(sideSTAR);
+ mg->Add(side2);
+ mg->SetMaximum(7);
+ mg->SetMinimum(2);
+ mg->Draw("AP");
+ mg->GetXaxis()->SetTitle("m_{T} (GeV/c)");
+ mg->GetXaxis()->SetLabelSize(0.05);
+ mg->GetXaxis()->SetTitleSize(0.08);
+ mg->GetXaxis()->SetTitleOffset(0.8);
+ mg->GetYaxis()->SetTitle("R_{side} (fm) ");
+ mg->GetYaxis()->SetLabelSize(0.05);
+ mg->GetYaxis()->SetTitleSize(0.08);
+ mg->GetYaxis()->SetTitleOffset(0.9);
+
+ //TLegend *legend=new TLegend(0.6, 0.6, 0.9, 0.9);
+ // legend->AddEntry(side, "sqrt(sNN)=11.5 GeV/c, 1-st order PT, ", "p");
+ // legend->AddEntry(side, "vHLLE+UrQMD, #pi#pi", "p");
+ //legend->Draw();
+
+ //c1->cd(1);
+
+ c1->cd(3);
+ gPad->SetTopMargin(0.02);
+ gPad->SetRightMargin(0.1);
+ gPad->SetLeftMargin(0.2);
+ gPad->SetBottomMargin(0.2);
+ 
+TMultiGraph *mg =new TMultiGraph(); 
+ TGraph *llong = new TGraphErrors(NPT1, pt_mean, rlong, ept, erlong) ;
+ llong->SetMarkerStyle(22);
+ llong->SetLineColor(kGreen+1);
+ llong->SetMarkerColor(kGreen+1);
+ llong->SetMarkerSize(1.4);
+
+TGraph *long2 = new TGraphErrors(NPT1, pt_mean, rlong2,ept, erlong2) ;
+ long2->SetMarkerStyle(20);
+ long2->SetLineColor(2);
+ long2->SetMarkerColor(2);
+ long2->SetMarkerSize(1.4);
+
+
+TGraph *longSTAR = new TGraphErrors(4, pt_mean_STAR, RlSTAR,ept, eRoSTAR) ;
+ longSTAR->SetMarkerStyle(32);
+ longSTAR->SetLineColor(1);
+ longSTAR->SetMarkerColor(1);
+ longSTAR->SetMarkerSize(1.4);
+
+
+ mg->Add(long2);
+ mg->Add(llong);
+ mg->Add(longSTAR);
+ mg->SetMaximum(7);
+ mg->SetMinimum(2);
+ mg->Draw("AP");
+ mg->GetXaxis()->SetTitle("m_{T} (GeV/c)");
+ mg->GetXaxis()->SetLabelSize(0.05);
+ mg->GetXaxis()->SetTitleSize(0.08);
+ mg->GetXaxis()->SetTitleOffset(0.8);
+ mg->GetYaxis()->SetTitle("R_{long} (fm) ");
+ mg->GetYaxis()->SetLabelSize(0.05);
+ mg->GetYaxis()->SetTitleSize(0.08);
+ mg->GetYaxis()->SetTitleOffset(0.9);
+
+  c1->cd(4);
+ gPad->SetTopMargin(0.02);
+ gPad->SetRightMargin(0.1);
+ gPad->SetLeftMargin(0.2);
+ gPad->SetBottomMargin(0.2);
+ gPad->SetBorderMode(0);
+ gPad->SetBorderSize(0);
+
+ TMultiGraph *mg =new TMultiGraph();
+ 
+ TGraph *grors = new TGraphErrors(NPT1, pt_mean, rors, ept, erors) ;
+ grors->SetMarkerStyle(22);
+ grors->SetLineColor(kGreen+1);
+ grors->SetMarkerColor(kGreen+1);
+ grors->SetMarkerSize(1.4);
+
+ //rors2
+ TGraph *grors2 = new TGraphErrors(NPT1, pt_mean, rors2, ept, erors2) ;
+ grors2->SetMarkerStyle(20);
+ grors2->SetLineColor(2);
+ grors2->SetMarkerColor(2);
+ grors2->SetMarkerSize(1.4);
+
+TGraph *gRosSTAR = new TGraphErrors(4, pt_mean_STAR, RosSTAR,ept, eRosSTAR) ;
+ gRosSTAR->SetMarkerStyle(32);
+ gRosSTAR->SetLineColor(1);
+ gRosSTAR->SetMarkerColor(1);
+ gRosSTAR->SetMarkerSize(1.4);
+
+ mg->Add(gRosSTAR);
+ mg->Add(grors2);
+ mg->Add(grors);
+ mg->SetMaximum(2);
+ mg->SetMinimum(0);
+ mg->Draw("AP");
+ mg->GetXaxis()->SetTitle("m_{T} (GeV/c)");
+ mg->GetXaxis()->SetLabelSize(0.05);
+ mg->GetXaxis()->SetTitleSize(0.08);
+ mg->GetXaxis()->SetTitleOffset(0.8);
+ mg->GetYaxis()->SetTitle("R_{out}/R_{side}");
+ mg->GetYaxis()->SetLabelSize(0.05);
+ mg->GetYaxis()->SetTitleSize(0.08);
+ mg->GetYaxis()->SetTitleOffset(0.9);
+ */
+ /*
+ c1->cd(5);
+ gPad->SetTopMargin(0.02);
+ gPad->SetRightMargin(0.1);
+ gPad->SetLeftMargin(0.2);
+ gPad->SetBottomMargin(0.2);
+ gPad->SetBorderMode(0);
+ gPad->SetBorderSize(0);
+
+ TMultiGraph *mg =new TMultiGraph();
+
+ TGraph *glambda = new TGraphErrors(NPT1, pt_mean, lambda, ept, elambda) ;
+ glambda->SetMarkerStyle(22);
+ glambda->SetLineColor(1);
+ glambda->SetMarkerColor(1);
+ glambda->SetMarkerSize(1.4);
+
+ mg->Add(glambda);
+ mg->SetMaximum(2);
+ mg->SetMinimum(0);
+ mg->Draw("AP");
+ mg->GetXaxis()->SetTitle("k_{t} (GeV/c)");
+ mg->GetXaxis()->SetLabelSize(0.05);
+ mg->GetXaxis()->SetTitleSize(0.08);
+ mg->GetXaxis()->SetTitleOffset(0.8);
+ mg->GetYaxis()->SetTitle("#lambda");
+ mg->GetYaxis()->SetLabelSize(0.05);
+ mg->GetYaxis()->SetTitleSize(0.08);
+ mg->GetYaxis()->SetTitleOffset(0.9);
+
+
+
+
+ c1->cd(6);
+ gPad->SetTopMargin(0.02);
+ gPad->SetRightMargin(0.1);
+ gPad->SetLeftMargin(0.2);
+ gPad->SetBottomMargin(0.2);
+ gPad->SetBorderMode(0);
+ gPad->SetBorderSize(0);
+ */
+
+
+}
+
+
+Double_t fithist3(Double_t *x, Double_t *par){
+
+  /* 
+  int IntMult = par[5];
+  int IntkT = par[6];
+
+  int IntRadius = par[7];
+
+  
+  Int_t xx = hcqinv0[4][IntkT][IntMult]->GetXaxis()->FindBin(x[0]);
+  Int_t yy = hcqinv0[4][IntkT][IntMult]->GetYaxis()->FindBin(x[1]);
+  Int_t zz = hcqinv0[4][IntkT][IntMult]->GetZaxis()->FindBin(x[2]);
+  
+
+  Double_t qinv = hcqinv0[4][IntkT][IntMult]->GetBinContent(xx,yy,zz);
+ 
+  //K' 
+   Int_t bin =hKprimK[IntRadius]->GetXaxis()->FindBin(qinv);
+   Double_t Kc=1;
+   if(bin<=hKprimK[IntRadius]->GetNbinsX()) Kc = hKprimK[IntRadius]->GetBinContent(bin);
+  //K: 
+  //Int_t bin =hKprim0[IntRadius]->GetXaxis()->FindBin(qinv);
+  //if(bin<=hKprim0[IntRadius]->GetNbinsX()) Kc = hKprim0[IntRadius]->GetBinContent(bin);//obichnii Coiulomb bez QS
+
+    Double_t fitval = par[4]*(1-par[0]+par[0]*Kc*(1+exp(-x[0]*x[0]*par[1]/3.89379e-02-x[1]*x[1]*par[2]/3.89379e-02-x[2]*x[2]*par[3]/3.89379e-02)));
+  */
+
+  fitval=1;
+  
+
+  return fitval;
+}
+
+
+Double_t hhscale(TH1D*hh, Int_t hhmi, Int_t hhma) {
+  //scale 1d hist skipping empty channels
+  Double_t sumx = 0;
+  Int_t binsum = 0;
+  for(Int_t x=hhmi; x<hhma+1 ; x++){
+    Double_t co = hh->GetBinContent(x);
+    Double_t eco = hh->GetBinError(x);
+    if(eco!=0)eco=eco/co;else eco=100.;
+    cout<<"Bin "<<x<<" contents "<<co<<" er "<<eco<<endl;
+    if(co != 0&&eco!=0&&eco!=100&&eco<0.5) {
+      sumx = sumx + co;
+      binsum++;
+    }
+  }
+  cout<<"Scale = "<<binsum<<"/"<<sumx<<endl;
+ Double_t scale = binsum/sumx;
+ return scale;
+}
+
